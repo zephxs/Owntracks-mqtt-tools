@@ -17,7 +17,7 @@ Required Apps : 'mosquitto_sub', 'mosquitto_pub', 'jq' (json parsing), 'nc' (por
 Required for 'publish' : 'termux-app' (location and battery), python3 with paho-mqtt
 
 also require : 
-https://github.com/zephxs/bash/blob/d494e722d4b6efd793ac6a7e80113fe5624ccb3d/functions/01-myecho-colors.sh
+https://github.com/zephxs/bash/tree/master/functions/01-myecho-colors.sh
 for fancy output !
 #
 *Can use TLS Client Certificate MQTT Broker authentication or User-Password credentials.
