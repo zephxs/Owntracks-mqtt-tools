@@ -11,7 +11,7 @@
 
 ### VARS : update connection info and tmp folder
 # certificate auth will have precedence over user+pass
-_MQTTHOST="my.broker.com"
+_MQTTHOST="my.owntracks.broker"
 _MQTTPORT="8883"
 _PUBSCRIPT="$HOME/bin/ot-mqtt-pub.py"
 # MQTT Auth infos (Certificate auth or User+Pass)
@@ -37,15 +37,12 @@ _PUBLISHLOCATION=''
 _GETTOPICS=''
 _VERBOSE=''
 _JSONTOPARSE=''
+_MAPSONLY=''
 
-# Set Connexion infos
-if [ -n "$_MQTTUSER" -a -n "$_MQTTPASS" ]; then
-_CONNECTIONINFO=(-h $_MQTTHOST -p $_MQTTPORT -u $_MQTTUSER -P "$_MQTTPASS")
-elif [ -n "$_MQTTCAFILE" -a -n "$_MQTTCERT" -a -n "$_MQTTKEY" ]; then
-_CONNECTIONINFO=(-h $_MQTTHOST -p $_MQTTPORT --cafile "${_MQTTCAFILE}" --cert "${_MQTTCERT}" --key "${_MQTTKEY}")
-else
-echo "Connection Info incomplete.. exit"; exit 1
-fi
+# Color and output
+type _MYECHO >/dev/null 2>&1 || . ${PREFIX}/etc/profile.d/01-myecho-colors.sh >/dev/null 2>&1
+_LINELENGH="56"
+
 
 # Usage
 _USAGE(){ echo "# Onwtracks broker tool $_VERS
@@ -56,8 +53,9 @@ Usage:
 -u|--user 'UserName'    # Owntracks client [Mandatory with 'list' and 'request'].
 -r|--request            # Request: Send a 'reportLocation' next time device is up.
 -l|--list               # List: parse last payload [DEFAULT].
+-m|--maps               # List: only parse and get gmaps link. 
 -n|--noaddress          # List: but do not search Approximate Address via Maps.co. 
--j|--json               # Parse any Owntracks JSon file.
+-j|--json 'file.json'   # Parse any Owntracks JSon file.
 -g|--get                # Get all Owntracks topics.
 -v|--verbose            # List: print raw json payload.
 -h|--help               # This Help
@@ -68,9 +66,6 @@ Request Device Update   : $(basename $0) -u username -r
 Publish Location        : $(basename $0) -p
 "; }
 
-# Color and output
-type _MYECHO >/dev/null 2>&1 || . ${PREFIX}/etc/profile.d/01-myecho-colors.sh >/dev/null 2>&1
-_LINELENGH="56"
 
 # Args
 while (($#)); do
@@ -80,20 +75,21 @@ while (($#)); do
           if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             [ -f "$2" ] && { _PARSEJSON='yes'; _JSONTOPARSE=$2 ; }; shift 2
           else
-            echo "Json $2 not found, exit.."; exit 1
+            _MYECHO -c red -s "Json $2 not found, exit.."; exit 1
           fi
           ;;
     -u|--user)
           if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             _USER=$2; shift 2
           else
-            echo "User $_USER not found, exit.."; exit 1
+            _MYECHO -c red -s "User $_USER not found, exit.."; exit 1
           fi
           ;;
     -r|--request) _REQUESTLOCATION='yes'; shift 1 ;;
     -g|--get) _GETTOPICS='yes'; shift 1 ;;
     -l|--list) _LISTLOCATION='yes'; shift 1 ;;
     -v|--verbose) _VERBOSE='yes'; shift 1 ;;
+    -m|--maps) _MAPSONLY='yes'; shift 1 ;;
     -n|--noaddress) _SEARCHLOC='no'; shift 1 ;;
     -h|--help) _USAGE && exit 0 ;;
     *) _MYECHO -c red -p "# Arg: \"$1\" not recognised.." && _USAGE && exit 1 ;;
@@ -102,11 +98,21 @@ done
 
 _MYECHO -t "Owntracks Broker tool $_VERS"
 _MYECHO "Broker" && echo "$_MQTTHOST"
-# Test connection to broker via 'nc' (needed)
-if ! type -P nc &>/dev/null; then
-  echo "# 'nc' not found.. exit"; exit 1
-elif ! nc -zvw1 "${_CONNECTIONINFO[1]}" "${_CONNECTIONINFO[3]}" &>/dev/null; then
-  echo "# No route to Broker.. exit"; exit 1
+# Set Connexion infos
+if [ -n "$_MQTTUSER" -a -n "$_MQTTPASS" ]; then
+  _CONNECTIONINFO=(-h $_MQTTHOST -p $_MQTTPORT -u $_MQTTUSER -P "$_MQTTPASS")
+elif [ -n "$_MQTTCAFILE" -a -n "$_MQTTCERT" -a -n "$_MQTTKEY" ]; then
+  _CONNECTIONINFO=(-h $_MQTTHOST -p $_MQTTPORT --cafile "${_MQTTCAFILE}" --cert "${_MQTTCERT}" --key "${_MQTTKEY}")
+else
+  _MYECHO -c red -s "Connection Info incomplete.. exit"
+  exit 1
+fi
+# Test connection to broker via 'ncat' (needed)
+if ! type -P ncat &>/dev/null; then
+  _MYECHO -c red -s "# 'ncat' not found.. exit"
+  exit 1
+elif ! ncat -zvw1 "${_CONNECTIONINFO[1]}" "${_CONNECTIONINFO[3]}" &>/dev/null; then
+  _MYECHO -c red -s "# No route to Broker.. exit"; exit 1
 fi
 # Test credentials to broker
 mosquitto_sub "${_CONNECTIONINFO[@]}" -t "owntracks/#" -v -W 1  &>/dev/null  >${_TMPFOLDER}/.mqtt-test
@@ -146,6 +152,11 @@ _LOCPARSER(){
 _LASTMODTIME=$(jq .tst <${_JSONTOPARSE})
 _LATTITUDE=$(jq .lat <${_JSONTOPARSE})
 _LONGITUDE=$(jq .lon <${_JSONTOPARSE})
+if [ "$_MAPSONLY" = 'yes' ]; then
+_MYECHO "Last Update" && date -d @"$_LASTMODTIME" +"%d/%m/%Y %T"
+_MYECHO "Maps Link" && echo "https://www.google.fr/maps/@${_LATTITUDE},${_LONGITUDE},18z?entry=ttu"
+exit 0
+fi
 _ALTITUDE=$(jq .alt <${_JSONTOPARSE})
 _PRECISION=$(jq .acc <${_JSONTOPARSE})
 _BATTERY=$(jq .batt <${_JSONTOPARSE})
@@ -179,7 +190,7 @@ _PUBLISHER(){
 _CREATED_AT=$(date +%s)
 # Get Termux-location output
 termux-location >${_LOCLOGFILE}
-[ -s "${_LOCLOGFILE}" ] || { echo "# Location Report Failed.."; exit 1; }
+[ -s "${_LOCLOGFILE}" ] || { _MYECHO -c red -s "# Location Report Failed.."; exit 1; }
 _LATITUDE=$(jq .latitude  <${_LOCLOGFILE})
 _LONGITUDE=$(jq .longitude  <${_LOCLOGFILE})
 _ACCURACY=$(printf "%.0f" $(jq .accuracy  <${_LOCLOGFILE}))
@@ -237,6 +248,7 @@ _REQUESTOR
 elif [ "$_PUBLISHLOCATION" = 'yes' ]; then
 _PUBLISHER
 elif [ "$_PARSEJSON" = 'yes' ]; then
+_MYECHO "Json file" && echo "$_JSONTOPARSE"
 _LOCPARSER
 elif [ "$_LISTLOCATION" = 'yes' ]; then
 _USERCHECK
