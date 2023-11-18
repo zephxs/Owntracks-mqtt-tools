@@ -3,20 +3,16 @@
 ##### Request location update to devices via mqtt,
 ##### Parse last payload of specified device, 
 ##### Generate your own '_type:location' payload with 'termux-location' and publish
+### v0.8 - rework log parser hability to parse any json file containing owntracks location payload
 ### v0.7 - Rework and full link with python publisher
 ### v0.6 - added hability to publish 'termux-location' as owntracks json payload to broker
-### v0.5 - added 'get all topics' and comments
-### v0.4 - moved to jq, added user validation
-### v0.3 - added gps to address via maps.co api
-### v0.2 - added last payload parse and variabilization
-### v0.1 - Request location update for Owntracks device
 # Required Apps : mosquitto_sub, jq, nc (for port testing)
 # Required for 'publish' : termux-app for location gather, ot-mqtt-pub.py script and python3 with paho-mqtt
 
 ### VARS : update connection info and tmp folder
 # certificate auth will have precedence over user+pass
 _MQTTHOST="my.broker.com"
-_MQTTPORT="1883"
+_MQTTPORT="8883"
 _PUBSCRIPT="$HOME/bin/ot-mqtt-pub.py"
 # MQTT Auth infos (Certificate auth or User+Pass)
 _MQTTUSER=''
@@ -27,11 +23,10 @@ _MQTTKEY="$HOME/mqttcerts/client.key"
 _TMPFOLDER='/data/data/com.termux/files/usr/tmp'
 
 # Publish vars (Use your Owntracks User ID and topic)
-_MQTTTOPIC="owntracks/user/device"
+_MQTTTOPIC="owntracks/user/device1"
 _TID="ZE"
 
 # other vars
-[ -d "$HOME/logs" ] || mkdir $HOME/logs
 _LOGFILE="$HOME/logs/termloc.json"
 _LOCLOGFILE="$HOME/logs/termloc.log"
 _PAYLOAD="$HOME/logs/termloc.payload"
@@ -41,6 +36,7 @@ _REQUESTLOCATION=''
 _PUBLISHLOCATION=''
 _GETTOPICS=''
 _VERBOSE=''
+_JSONTOPARSE=''
 
 # Set Connexion infos
 if [ -n "$_MQTTUSER" -a -n "$_MQTTPASS" ]; then
@@ -61,6 +57,7 @@ Usage:
 -r|--request            # Request: Send a 'reportLocation' next time device is up.
 -l|--list               # List: parse last payload [DEFAULT].
 -n|--noaddress          # List: but do not search Approximate Address via Maps.co. 
+-j|--json               # Parse any Owntracks JSon file.
 -g|--get                # Get all Owntracks topics.
 -v|--verbose            # List: print raw json payload.
 -h|--help               # This Help
@@ -79,6 +76,13 @@ _LINELENGH="56"
 while (($#)); do
   case $1 in
     -p|--publish) _PUBLISHLOCATION="yes"; shift 1 ;;
+    -j|--json)
+          if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            [ -f "$2" ] && { _PARSEJSON='yes'; _JSONTOPARSE=$2 ; }; shift 2
+          else
+            echo "Json $2 not found, exit.."; exit 1
+          fi
+          ;;
     -u|--user)
           if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             _USER=$2; shift 2
@@ -138,21 +142,18 @@ echo
 }
 
 _LOCPARSER(){
-_USERCHECK
-_MYECHO "User" && echo "$_USER"
-mosquitto_sub "${_CONNECTIONINFO[@]}" -t "owntracks/user/$_USER" -W 1  &>/dev/null  >${_TMPFOLDER}/.mqtt-tmp-request
-# Set vars from mqtt payload with jq
-_LASTMODTIME=$(jq .tst <${_TMPFOLDER}/.mqtt-tmp-request)
-_LATTITUDE=$(jq .lat <${_TMPFOLDER}/.mqtt-tmp-request)
-_LONGITUDE=$(jq .lon <${_TMPFOLDER}/.mqtt-tmp-request)
-_ALTITUDE=$(jq .alt <${_TMPFOLDER}/.mqtt-tmp-request)
-_PRECISION=$(jq .acc <${_TMPFOLDER}/.mqtt-tmp-request)
-_BATTERY=$(jq .batt <${_TMPFOLDER}/.mqtt-tmp-request)
-_NETACCESS=$(jq .conn <${_TMPFOLDER}/.mqtt-tmp-request)
+# Set vars from mqtt payload
+_LASTMODTIME=$(jq .tst <${_JSONTOPARSE})
+_LATTITUDE=$(jq .lat <${_JSONTOPARSE})
+_LONGITUDE=$(jq .lon <${_JSONTOPARSE})
+_ALTITUDE=$(jq .alt <${_JSONTOPARSE})
+_PRECISION=$(jq .acc <${_JSONTOPARSE})
+_BATTERY=$(jq .batt <${_JSONTOPARSE})
+_NETACCESS=$(jq .conn <${_JSONTOPARSE})
 [ "$_NETACCESS" = '"w"' ] && _NETWORK='Wifi'
 [ "$_NETACCESS" = '"m"' ] && _NETWORK='Mobile'
-[ "$(jq [.inregions] -c <${_TMPFOLDER}/.mqtt-tmp-request)" = '[null]'  ] && _INREGION='' || _INREGION=$(jq .inregions[] -c  <${_TMPFOLDER}/.mqtt-tmp-request)
-[ "$(jq .tag  <${_TMPFOLDER}/.mqtt-tmp-request)" = 'null'  ] && _OTAG='Owntracks' || _OTAG=$(jq .tag  <${_TMPFOLDER}/.mqtt-tmp-request |tr -d '"')
+[ "$(jq [.inregions] -c <${_JSONTOPARSE})" = '[null]'  ] && _INREGION='' || _INREGION=$(jq .inregions[] -c  <${_JSONTOPARSE})
+[ "$(jq .tag  <${_JSONTOPARSE})" = 'null'  ] && _OTAG='Owntracks' || _OTAG=$(jq .tag  <${_JSONTOPARSE} |tr -d '"')
 # Print results
 _MYECHO "Last Update" && date -d @"$_LASTMODTIME" +"%d/%m/%Y %T"
 _MYECHO "Lattitude" && echo "$_LATTITUDE"
@@ -170,9 +171,7 @@ if [ -z "$_SEARCHLOC" ]; then
   curl -s -o - "https://geocode.maps.co/reverse?lat=${_LATTITUDE}&lon=${_LONGITUDE}" |jq .display_name
 fi
 # Verbose option show raw mqtt payload
-[ "$_VERBOSE" = 'yes' ] && _MYECHO -p "Raw payload:" && jq <${_TMPFOLDER}/.mqtt-tmp-request
-# Remove tmp files
-rm ${_TMPFOLDER}/.mqtt-*
+[ "$_VERBOSE" = 'yes' ] && _MYECHO -p "Raw payload:" && jq <${_JSONTOPARSE}
 echo
 }
 
@@ -237,7 +236,13 @@ if [ "$_REQUESTLOCATION" = 'yes' ]; then
 _REQUESTOR
 elif [ "$_PUBLISHLOCATION" = 'yes' ]; then
 _PUBLISHER
+elif [ "$_PARSEJSON" = 'yes' ]; then
+_LOCPARSER
 elif [ "$_LISTLOCATION" = 'yes' ]; then
+_USERCHECK
+_MYECHO "User" && echo "$_USER"
+mosquitto_sub "${_CONNECTIONINFO[@]}" -t "owntracks/user/$_USER" -W 1  &>/dev/null  >${_TMPFOLDER}/.mqtt-tmp-request
+_JSONTOPARSE="${_TMPFOLDER}/.mqtt-tmp-request"
 _LOCPARSER
 fi
 
