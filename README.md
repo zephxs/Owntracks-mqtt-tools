@@ -1,12 +1,21 @@
 # Owntracks-mqtt-tools
 
-Toolset first created to send 'requestLocation' mqtt payload to ask device to update when it gets up. 
+Bash script [owntracks.sh] used to parse MQTT Owntracks Location payload, 
+linked to the Python script [ot-mqtt-pub.py] and Termux for TLS MQTT Publishing. 
+
+Toolset was first created to send a 'requestLocation' mqtt payload to an Owntracks broker, so it ask a device to update when it gets up.
+
 Can now do much more things :
-- Request location update to devices via your mqtt Broker.
+- Show all topics your user have access to on the broker.
+- Request location update to remote devices via your mqtt Broker.
 - Parse last payload of specified device for easy reading (gmap link and approximate address conversion). 
-- Generate your own '_type:location' payload with 'termux-location' and publish it as legit Owntracks payload
+- Generate own '_type:location' payload with 'termux-location' and publish it as legit Owntracks payload.
 
-Required Apps : 'mosquitto_sub', 'mosquitto_sub', 'jq', 'nc' (for port testing)
-Required for 'publish' : 'termux-app' for location and battery gathering, python3 with paho-mqtt
+Required Apps : 'mosquitto_sub', 'mosquitto_pub', 'jq' (json parsing), 'nc' (port testing)
+Required for 'publish' : 'termux-app' (location and battery), python3 with paho-mqtt
 
-Can use TLS Client Certificate MQTT Broker authentication or User-Password credentials.
+also require : 
+https://github.com/zephxs/bash/blob/d494e722d4b6efd793ac6a7e80113fe5624ccb3d/functions/01-myecho-colors.sh
+for fancy output !
+
+*Can use TLS Client Certificate MQTT Broker authentication or User-Password credentials.
