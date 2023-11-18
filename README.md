@@ -12,9 +12,9 @@ It can now do much more things :
 - Parse last payload of specified device for easy reading (gmap link and approximate address conversion). 
 - Generate own '_type:location' payload with 'termux-location' and publish it as legit Owntracks payload.
 
-Required Apps : 'mosquitto_sub', 'mosquitto_pub', 'jq' (json parsing), 'nc' (port testing)
+Required Apps : 'mosquitto_sub', 'jq' (json parsing), 'ncat' (port testing)
 
-Required for 'publish' : 'termux-app' (location and battery), python3 with paho-mqtt
+Required for 'publish' : Python3 with paho-mqtt library (pip install paho-mqtt), and 'termux-api' (for location and battery).
 
 also require : 
 https://github.com/zephxs/bash/tree/master/functions/01-myecho-colors.sh
