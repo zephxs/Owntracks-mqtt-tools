@@ -91,7 +91,7 @@ while (($#)); do
     -m|--maps) _MAPSONLY='yes'; shift 1 ;;
     -n|--noaddress) _SEARCHLOC='no'; shift 1 ;;
     -h|--help) _FNUSAGE && exit 0 ;;
-    *) _MYECHO -c red -p "# Arg  not recognised.." && _FNUSAGE && exit 1 ;;
+    *) _MYECHO -c red -p "# Arg not recognised.." && _FNUSAGE && exit 1 ;;
   esac
 done
 
@@ -237,14 +237,6 @@ jq -c <${_LOGFILE} >${_PAYLOAD}
 # send the payload with mqtt-pub.py
 _MYECHO "Send Payload"
 mosquitto_pub "${_CONNECTIONINFO[@]}" -r -t "${_MQTTTOPIC}" -f "${_PAYLOAD}" && _OK || _KO
-
-# Old python script call
-#if [ -z "$_MQTTUSER" ]; then
-#python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -a "$_MQTTCAFILE" -c "$_MQTTCERT" -k "$_MQTTKEY" -t "$_MQTTTOPIC" -j "$_PAYLOAD"
-#else
-#python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -u "$_MQTTUSER" -P "$_MQTTPASS" -t "$_MQTTTOPIC" -j "$_PAYLOAD" 
-#fi
-
 }
 
 ### MAIN
