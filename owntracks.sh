@@ -11,7 +11,7 @@
 
 ### VARS : update connection info and tmp folder
 # certificate auth will have precedence over user+pass
-_MQTTHOST="my.owntracks.broker"
+_MQTTHOST="gps.dr34d.net"
 _MQTTPORT="8883"
 _PUBSCRIPT="$HOME/bin/ot-mqtt-pub.py"
 # MQTT Auth infos (Certificate auth or User+Pass)
@@ -23,7 +23,7 @@ _MQTTKEY="$HOME/mqttcerts/client.key"
 _TMPFOLDER='/data/data/com.termux/files/usr/tmp'
 
 # Publish vars (Use your Owntracks User ID and topic)
-_MQTTTOPIC="owntracks/user/device1"
+_MQTTTOPIC="owntracks/user/note9"
 _TID="ZE"
 
 # other vars
@@ -45,7 +45,7 @@ _LINELENGH="56"
 
 
 # Usage
-_USAGE(){ echo "# Onwtracks broker tool $_VERS
+_FNUSAGE(){ echo "# Onwtracks broker tool $_VERS
 # Request Location Update or parse  payload
 
 Usage:
@@ -91,8 +91,8 @@ while (($#)); do
     -v|--verbose) _VERBOSE='yes'; shift 1 ;;
     -m|--maps) _MAPSONLY='yes'; shift 1 ;;
     -n|--noaddress) _SEARCHLOC='no'; shift 1 ;;
-    -h|--help) _USAGE && exit 0 ;;
-    *) _MYECHO -c red -p "# Arg: \"$1\" not recognised.." && _USAGE && exit 1 ;;
+    -h|--help) _FNUSAGE && exit 0 ;;
+    *) _MYECHO -c red -p "# Arg  not recognised.." && _FNUSAGE && exit 1 ;;
   esac
 done
 
@@ -189,8 +189,9 @@ echo
 _PUBLISHER(){
 _CREATED_AT=$(date +%s)
 # Get Termux-location output
+_MYECHO "Get Current Location"
 termux-location >${_LOCLOGFILE}
-[ -s "${_LOCLOGFILE}" ] || { _MYECHO -c red -s "# Location Report Failed.."; exit 1; }
+[ -s "${_LOCLOGFILE}" ] && _OK || { _KO "# Location Report Failed.."; exit 1; }
 _LATITUDE=$(jq .latitude  <${_LOCLOGFILE})
 _LONGITUDE=$(jq .longitude  <${_LOCLOGFILE})
 _ACCURACY=$(printf "%.0f" $(jq .accuracy  <${_LOCLOGFILE}))
@@ -234,12 +235,16 @@ echo '}' >>${_LOGFILE}
 # move to json compact format
 jq -c <${_LOGFILE} >${_PAYLOAD}
 # send the payload with mqtt-pub.py
-if [ -z "$_MQTTUSER" ]; then
-python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -a "$_MQTTCAFILE" -c "$_MQTTCERT" -k "$_MQTTKEY" -t "$_MQTTTOPIC" -j "$_PAYLOAD"
-else
-python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -u "$_MQTTUSER" -P "$_MQTTPASS" -t "$_MQTTTOPIC" -j "$_PAYLOAD" 
-fi
-_MYECHO "Payload sent" && _OK
+_MYECHO "Send Payload"
+mosquitto_pub "${_CONNECTIONINFO[@]}" -r -t "${_MQTTTOPIC}" -f "${_PAYLOAD}" && _OK || _KO
+
+# Old python script call
+#if [ -z "$_MQTTUSER" ]; then
+#python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -a "$_MQTTCAFILE" -c "$_MQTTCERT" -k "$_MQTTKEY" -t "$_MQTTTOPIC" -j "$_PAYLOAD"
+#else
+#python3 ${_PUBSCRIPT} -b "$_MQTTHOST" -p "$_MQTTPORT" -u "$_MQTTUSER" -P "$_MQTTPASS" -t "$_MQTTTOPIC" -j "$_PAYLOAD" 
+#fi
+
 }
 
 ### MAIN
