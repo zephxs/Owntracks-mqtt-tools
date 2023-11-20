@@ -11,9 +11,8 @@
 
 ### VARS : update connection info and tmp folder
 # certificate auth will have precedence over user+pass
-_MQTTHOST="gps.dr34d.net"
+_MQTTHOST="my.broker.com"
 _MQTTPORT="8883"
-_PUBSCRIPT="$HOME/bin/ot-mqtt-pub.py"
 # MQTT Auth infos (Certificate auth or User+Pass)
 _MQTTUSER=''
 _MQTTPASS=''
@@ -23,7 +22,7 @@ _MQTTKEY="$HOME/mqttcerts/client.key"
 _TMPFOLDER='/data/data/com.termux/files/usr/tmp'
 
 # Publish vars (Use your Owntracks User ID and topic)
-_MQTTTOPIC="owntracks/user/note9"
+_MQTTTOPIC="owntracks/user/device"
 _TID="ZE"
 
 # other vars
