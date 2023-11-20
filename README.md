@@ -1,7 +1,7 @@
 # Owntracks-mqtt-tools
 
 [owntracks.sh]  is used to parse MQTT Owntracks 'last Location' payload, and send remote device update request. 
- On Android Device 'Termux-api' (Android term) can be used for Location gathering, and is able to publish legit Location Owntracks payloads (seen in Owntracks app with proper infos).
+ On Android devices, this script uses 'Termux-api' (Android term) for Location gathering, and is able to publish legit Location Owntracks payloads (seen in Owntracks app with proper infos).
 
 #
 This tool was first created to send a 'requestLocation' mqtt payload for a remote device to an Owntracks MQTT broker.
@@ -21,7 +21,7 @@ also require (for bash fancy output):
 https://github.com/zephxs/bash/tree/master/functions/01-myecho-colors.sh
 #
 
-+Can use TLS Client Certificate or User-Password credentials for MQTT Broker authentication.
++ Can use TLS Client Certificate or User-Password credentials for MQTT Broker authentication.
 
 [ot-mqtt-pub.py]  was first used for MQTT publish. Leaved here for educational purpose.
 
