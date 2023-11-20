@@ -187,6 +187,7 @@ echo
 }
 
 _PUBLISHER(){
+type -P termux-location &>/dev/null ||  { _MYECHO -c red -s "termux-location not available.. exit"; exit 1; }
 _CREATED_AT=$(date +%s)
 # Get Termux-location output
 _MYECHO "Get Current Location"
