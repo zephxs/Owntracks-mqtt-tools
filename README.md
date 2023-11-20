@@ -1,8 +1,8 @@
 # Owntracks-mqtt-tools
 
-[owntracks.sh]  is used to parse MQTT Owntracks Location payload, and send update request. 
+[owntracks.sh]  is used to parse MQTT Owntracks 'last Location' payload, and send remote device update request. 
+ On Android Device 'Termux-api' (Android term) can be used for Location gathering, and is able to publish legit Location Owntracks payloads (seen in Owntracks app with proper infos).
 
-[ot-mqtt-pub.py]  is used for MQTT publish and 'Termux' (Android term) for Location gather, all can publish legit Location Owntracks payloads.
 #
 This tool was first created to send a 'requestLocation' mqtt payload for a remote device to an Owntracks MQTT broker.
 
@@ -10,14 +10,18 @@ It can now do much more things :
 - Show all topics your user have access to on the broker.
 - Request location update to remote devices via your mqtt Broker.
 - Parse last payload of specified device for easy reading (gmap link and approximate address conversion). 
-- Generate own '_type:location' payload with 'termux-location' and publish it as legit Owntracks payload.
+- Generate current '_type:location' payload with 'termux-location' and publish it as legit Owntracks payload.
+- Parse json Onwtracks file.
 
 Required Apps : 'mosquitto' (for publish and subscribe), 'jq' (json parsing), 'ncat' (port testing)
 
-Required for 'publish' : Python3 with paho-mqtt library (pip install paho-mqtt), and 'termux-api' (for location and battery).
+Required for 'Publishing current Location' : Android phone with 'termux-api' (for location and battery info).
 
-also require : 
+also require (for bash fancy output): 
 https://github.com/zephxs/bash/tree/master/functions/01-myecho-colors.sh
-for fancy output !
 #
-* Can use TLS Client Certificate or User-Password credentials for MQTT Broker authentication.
+
++Can use TLS Client Certificate or User-Password credentials for MQTT Broker authentication.
+
+[ot-mqtt-pub.py]  was first used for MQTT publish. Leaved here for educational purpose.
+
