@@ -3,6 +3,7 @@
 ##### Request location update to devices via mqtt,
 ##### Parse last payload of specified device, 
 ##### Generate your own '_type:location' payload with 'termux-location' and publish
+### v0.9 - Removed geoloc address finder dur to api restrictions
 ### v0.8 - rework log parser hability to parse any json file containing owntracks location payload
 ### v0.7 - Rework and full link with python publisher
 ### v0.6 - added hability to publish 'termux-location' as owntracks json payload to broker
@@ -53,7 +54,6 @@ Usage:
 -r|--request            # Request: Send a 'reportLocation' next time device is up.
 -l|--list               # List: parse last payload [DEFAULT].
 -m|--maps               # List: only parse and get gmaps link. 
--n|--noaddress          # List: but do not search Approximate Address via Maps.co. 
 -j|--json 'file.json'   # Parse any Owntracks JSon file.
 -g|--get                # Get all Owntracks topics.
 -v|--verbose            # List: print raw json payload.
@@ -89,7 +89,6 @@ while (($#)); do
     -l|--list) _LISTLOCATION='yes'; shift 1 ;;
     -v|--verbose) _VERBOSE='yes'; shift 1 ;;
     -m|--maps) _MAPSONLY='yes'; shift 1 ;;
-    -n|--noaddress) _SEARCHLOC='no'; shift 1 ;;
     -h|--help) _FNUSAGE && exit 0 ;;
     *) _MYECHO -c red -p "# Arg not recognised.." && _FNUSAGE && exit 1 ;;
   esac
@@ -175,11 +174,6 @@ _MYECHO "Network" && echo "$_NETWORK"
 _MYECHO "Tag" && echo "$_OTAG"
 [ ! -z "$_INREGION" ] && _MYECHO "Place" && echo "$_INREGION"
 _MYECHO "Maps Link" && echo "https://www.google.fr/maps/@${_LATTITUDE},${_LONGITUDE},18z?entry=ttu"
-# noaddress option
-if [ -z "$_SEARCHLOC" ]; then
-  _MYECHO "Approx. Address"
-  curl -s -o - "https://geocode.maps.co/reverse?lat=${_LATTITUDE}&lon=${_LONGITUDE}" |jq .display_name
-fi
 # Verbose option show raw mqtt payload
 [ "$_VERBOSE" = 'yes' ] && _MYECHO -p "Raw payload:" && jq <${_JSONTOPARSE}
 echo
