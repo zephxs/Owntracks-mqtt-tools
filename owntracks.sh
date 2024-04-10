@@ -39,10 +39,20 @@ _VERBOSE=''
 _JSONTOPARSE=''
 _MAPSONLY=''
 
-# Color and output
-type _MYECHO >/dev/null 2>&1 || . ${PREFIX}/etc/profile.d/01-myecho-colors.sh >/dev/null 2>&1
-_LINELENGH="56"
-
+# Load myecho for nicer output
+if ! type _MYECHO >/dev/null 2>&1; then
+  if [ -f "/etc/profile.d/01-myecho-colors.sh" ]; then
+    source /etc/profile.d/01-myecho-colors.sh >/dev/null 2>&1
+  elif [ -f "$HOME/01-myecho-colors.sh" ]; then
+    source "$HOME/01-myecho-colors.sh" >/dev/null 2>&1
+  else
+    echo "Nice Output - Install 'myecho' function (in homedir: 01-myecho-colors.sh)"
+    cd "$HOME"
+    curl -s -LO https://raw.githubusercontent.com/zephxs/bash/master/functions/01-myecho-colors.sh
+    head -20 01-myecho-colors.sh |grep -q "^_MYECHO () {" && echo "myecho installed!" || { echo "myecho install failed, exit.."; exit 1; }
+    source "$HOME/01-myecho-colors.sh" >/dev/null 2>&1
+  fi
+fi
 
 # Usage
 _FNUSAGE(){ echo "# Onwtracks broker tool $_VERS
